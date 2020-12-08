@@ -1,0 +1,15 @@
+[tasks.check_stable]
+command = "cargo"
+toolchain = "stable"
+args = ["check"]
+
+[tasks.check_nightly]
+command = "cargo"
+toolchain = "nightly"
+args = ["check", "--features", "nightly"]
+
+[tasks.check_all]
+dependencies = [
+    "check_stable",
+    "check_nightly",
+]
