@@ -1,6 +1,6 @@
 #![no_std]
 #![allow(unused_unsafe)]
-#![cfg_attr(feature = "nightly", feature(alloc_layout_extra))]
+#![feature(alloc_layout_extra)]
 
 extern crate alloc as std;
 
@@ -10,19 +10,19 @@ use core::{
     mem::{size_of, MaybeUninit},
 };
 
-#[cfg(feature = "nightly")]
-mod nightly;
-#[cfg(feature = "nightly")]
+mod nightly {
+    use super::{Heap, Inline};
+
+    use core::mem::ManuallyDrop;
+
+    pub(crate) union Data<T, A> {
+        inline: ManuallyDrop<Inline<T, A>>,
+    }
+}
 use nightly as imp;
 
-#[cfg(not(feature = "nightly"))]
-mod stable;
-#[cfg(not(feature = "nightly"))]
-use stable as imp;
-
 pub struct SmallVec<T, A> {
-    capacity: usize,
-    data: imp::Data<T, A>,
+    data: nightly::Data<T, A>,
 }
 
 #[repr(C)]
@@ -33,8 +33,6 @@ struct Inline<T, A> {
 
 pub(crate) struct Heap<T> {
     ptr: *mut T,
-    len: usize,
-    drop: PhantomData<T>,
 }
 
 impl<T, A> Drop for SmallVec<T, A> {
@@ -42,172 +40,51 @@ impl<T, A> Drop for SmallVec<T, A> {
         struct DeallocOnDrop<'a, T, A>(&'a mut SmallVec<T, A>);
 
         impl<'a, T, A> Drop for DeallocOnDrop<'_, T, A> {
-            fn drop(&mut self) {
-                unsafe {
-                    self.0.data.dealloc(self.0.capacity());
-                }
-            }
+            fn drop(&mut self) { loop {} }
         }
 
-        unsafe {
-            let dealloc = DeallocOnDrop(self);
-            let this = &mut *dealloc.0;
-            let (ptr, len, _) = this.raw_parts_mut();
-            core::ptr::slice_from_raw_parts_mut(ptr, *len).drop_in_place()
-        }
+        loop {}
     }
 }
 
 impl<T> Heap<T> {
-    unsafe fn dealloc(&mut self, layout: Layout) { std::alloc::dealloc(self.ptr.cast(), layout) }
+    unsafe fn dealloc(&mut self, layout: Layout) { loop {} }
 }
 
 impl<T, A> Inline<T, A> {
-    pub const CAPACITY: usize = if size_of::<T>() == 0 {
-        usize::MAX
-    } else {
-        size_of::<A>() / size_of::<T>()
-    };
+    pub const CAPACITY: usize = 0;
 
-    const fn new() -> Self {
-        Inline {
-            array: MaybeUninit::uninit(),
-            align: [],
-        }
-    }
+    const fn new() -> Self { loop {} }
 }
 
 impl<T, A> SmallVec<T, A> {
-    pub const INLINE_CAPACITY: usize = Inline::<T, A>::CAPACITY;
+    pub const INLINE_CAPACITY: usize = 0;
 
-    pub fn new() -> Self {
-        Self {
-            data: imp::Data::new(),
-            capacity: 0,
-        }
-    }
+    pub fn new() -> Self { loop {} }
 
-    pub fn capacity(&self) -> usize { self.capacity.max(Self::INLINE_CAPACITY) }
+    pub fn capacity(&self) -> usize { loop {} }
 
-    pub fn is_inline(&self) -> bool { self.capacity <= Self::INLINE_CAPACITY }
+    pub fn is_inline(&self) -> bool { loop {} }
 
-    pub fn len(&self) -> usize {
-        #[cfg(feature = "nightly")]
-        {
-            unsafe { self.data.len(self.capacity, self.capacity <= Self::INLINE_CAPACITY) }
-        }
+    pub fn len(&self) -> usize { loop {} }
 
-        #[cfg(not(feature = "nightly"))]
-        {
-            self.data.len(self.capacity)
-        }
-    }
+    pub fn reserve(&mut self, additional: usize) { loop {} }
 
-    pub fn reserve(&mut self, additional: usize) {
-        self.reserve_capacity(self.len().checked_add(additional).expect("Overflow when reserving"))
-    }
+    fn reserve_capacity(&mut self, new_capacity: usize) { loop {} }
 
-    fn reserve_capacity(&mut self, new_capacity: usize) {
-        let old_capacity = self.capacity();
-        if new_capacity > old_capacity {
-            #[cfg(feature = "nightly")]
-            unsafe {
-                self.data
-                    .reserve(old_capacity, new_capacity, old_capacity <= Self::INLINE_CAPACITY);
-            }
+    pub fn as_ptr(&self) -> *const T { loop {} }
 
-            #[cfg(not(feature = "nightly"))]
-            {
-                unsafe { self.data.reserve(old_capacity, new_capacity) };
-            }
+    pub fn as_mut_ptr(&mut self) -> *mut T { loop {} }
 
-            self.capacity = new_capacity;
-        }
-    }
+    unsafe fn raw_parts(&self) -> (*const T, usize, usize) { loop {} }
 
-    pub fn as_ptr(&self) -> *const T {
-        #[cfg(feature = "nightly")]
-        unsafe {
-            self.data.as_ptr(self.is_inline())
-        }
+    unsafe fn raw_parts_mut(&mut self) -> (*mut T, &mut usize, usize) { loop {} }
 
-        #[cfg(not(feature = "nightly"))]
-        {
-            self.data.as_ptr()
-        }
-    }
+    pub fn as_slice(&self) -> &[T] { loop {} }
 
-    pub fn as_mut_ptr(&mut self) -> *mut T {
-        #[cfg(feature = "nightly")]
-        unsafe {
-            self.data.as_mut_ptr(self.is_inline())
-        }
+    pub fn as_mut_slice(&mut self) -> &mut [T] { loop {} }
 
-        #[cfg(not(feature = "nightly"))]
-        {
-            self.data.as_mut_ptr()
-        }
-    }
+    pub fn push(&mut self, value: T) -> &mut T { loop {} }
 
-    unsafe fn raw_parts(&self) -> (*const T, usize, usize) {
-        let cap = self.capacity();
-        #[cfg(not(feature = "nightly"))]
-        let (ptr, len) = self.data.raw_parts();
-
-        #[cfg(feature = "nightly")]
-        let (ptr, len) = self.data.raw_parts(self.is_inline());
-
-        (ptr, len.unwrap_or(self.capacity), cap)
-    }
-
-    unsafe fn raw_parts_mut(&mut self) -> (*mut T, &mut usize, usize) {
-        let cap = self.capacity();
-        #[cfg(not(feature = "nightly"))]
-        let (ptr, len_ref) = self.data.raw_parts_mut();
-
-        #[cfg(feature = "nightly")]
-        let (ptr, len_ref) = self.data.raw_parts_mut(self.is_inline());
-
-        (ptr, len_ref.unwrap_or(&mut self.capacity), cap)
-    }
-
-    pub fn as_slice(&self) -> &[T] {
-        unsafe {
-            let (ptr, len, _) = self.raw_parts();
-            core::slice::from_raw_parts(ptr, len)
-        }
-    }
-
-    pub fn as_mut_slice(&mut self) -> &mut [T] {
-        unsafe {
-            let (ptr, len, _) = self.raw_parts_mut();
-            core::slice::from_raw_parts_mut(ptr, *len)
-        }
-    }
-
-    pub fn push(&mut self, value: T) -> &mut T {
-        let len = self.len();
-        if len == self.capacity() {
-            self.reserve(len + 1);
-        }
-
-        unsafe {
-            let (ptr, len, _) = self.raw_parts_mut();
-            let ptr = ptr.add(*len);
-            *len += 1;
-            ptr.write(value);
-            &mut *ptr
-        }
-    }
-
-    pub fn pop(&mut self) -> Option<T> {
-        unsafe {
-            let (ptr, len_ref, _) = self.raw_parts_mut();
-            let len = len_ref.checked_sub(1)?;
-            *len_ref = len;
-
-            let ptr = ptr.add(len);
-            Some(ptr.read())
-        }
-    }
+    pub fn pop(&mut self) -> Option<T> { loop {} }
 }
