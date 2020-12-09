@@ -10,13 +10,7 @@ use core::{
     mem::{size_of, MaybeUninit},
 };
 
-mod nightly {
-    use super::Inline;
-
-    use core::mem::ManuallyDrop;
-
-    pub(crate) struct Data;
-}
+mod nightly {}
 use nightly as imp;
 
 pub struct SmallVec;
