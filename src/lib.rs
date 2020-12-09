@@ -11,29 +11,20 @@ use core::{
 };
 
 mod nightly {
-    use super::{Heap, Inline};
+    use super::Inline;
 
     use core::mem::ManuallyDrop;
 
-    pub(crate) union Data<T, A> {
-        inline: ManuallyDrop<Inline<T, A>>,
-    }
+    pub(crate) struct Data<T, A>(T, A);
 }
 use nightly as imp;
 
-pub struct SmallVec<T, A> {
-    data: nightly::Data<T, A>,
-}
+pub struct SmallVec<T, A>(T, A);
 
 #[repr(C)]
-struct Inline<T, A> {
-    align: [T; 0],
-    array: MaybeUninit<A>,
-}
+struct Inline<T, A>(T, A);
 
-pub(crate) struct Heap<T> {
-    ptr: *mut T,
-}
+pub(crate) struct Heap<T>(T);
 
 impl<T, A> Drop for SmallVec<T, A> {
     fn drop(&mut self) {
