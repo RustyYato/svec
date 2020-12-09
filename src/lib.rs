@@ -15,22 +15,22 @@ mod nightly {
 
     use core::mem::ManuallyDrop;
 
-    pub(crate) struct Data<T, A>(T, A);
+    pub(crate) struct Data;
 }
 use nightly as imp;
 
-pub struct SmallVec<T, A>(T, A);
+pub struct SmallVec;
 
 #[repr(C)]
-struct Inline<T, A>(T, A);
+struct Inline;
 
-pub(crate) struct Heap<T>(T);
+pub(crate) struct Heap;
 
-impl<T, A> Drop for SmallVec<T, A> {
+impl Drop for SmallVec {
     fn drop(&mut self) {
-        struct DeallocOnDrop<'a, T, A>(&'a mut SmallVec<T, A>);
+        struct DeallocOnDrop;
 
-        impl<'a, T, A> Drop for DeallocOnDrop<'_, T, A> {
+        impl Drop for DeallocOnDrop {
             fn drop(&mut self) { loop {} }
         }
 
@@ -38,17 +38,17 @@ impl<T, A> Drop for SmallVec<T, A> {
     }
 }
 
-impl<T> Heap<T> {
+impl Heap {
     unsafe fn dealloc(&mut self, layout: Layout) { loop {} }
 }
 
-impl<T, A> Inline<T, A> {
+impl Inline {
     pub const CAPACITY: usize = 0;
 
     const fn new() -> Self { loop {} }
 }
 
-impl<T, A> SmallVec<T, A> {
+impl SmallVec {
     pub const INLINE_CAPACITY: usize = 0;
 
     pub fn new() -> Self { loop {} }
@@ -63,19 +63,19 @@ impl<T, A> SmallVec<T, A> {
 
     fn reserve_capacity(&mut self, new_capacity: usize) { loop {} }
 
-    pub fn as_ptr(&self) -> *const T { loop {} }
+    pub fn as_ptr(&self) -> *const () { loop {} }
 
-    pub fn as_mut_ptr(&mut self) -> *mut T { loop {} }
+    pub fn as_mut_ptr(&mut self) -> *mut () { loop {} }
 
-    unsafe fn raw_parts(&self) -> (*const T, usize, usize) { loop {} }
+    unsafe fn raw_parts(&self) -> (*const (), usize, usize) { loop {} }
 
-    unsafe fn raw_parts_mut(&mut self) -> (*mut T, &mut usize, usize) { loop {} }
+    unsafe fn raw_parts_mut(&mut self) -> (*mut (), &mut usize, usize) { loop {} }
 
-    pub fn as_slice(&self) -> &[T] { loop {} }
+    pub fn as_slice(&self) -> &[()] { loop {} }
 
-    pub fn as_mut_slice(&mut self) -> &mut [T] { loop {} }
+    pub fn as_mut_slice(&mut self) -> &mut [()] { loop {} }
 
-    pub fn push(&mut self, value: T) -> &mut T { loop {} }
+    pub fn push(&mut self, value: ()) -> &mut () { loop {} }
 
-    pub fn pop(&mut self) -> Option<T> { loop {} }
+    pub fn pop(&mut self) -> Option<()> { loop {} }
 }
