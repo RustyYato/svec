@@ -1,6 +1,6 @@
 #![no_std]
-#![allow(unused_unsafe)]
-#![feature(alloc_layout_extra)]
+#![allow()]
+#![feature()]
 
 extern crate alloc as std;
 
